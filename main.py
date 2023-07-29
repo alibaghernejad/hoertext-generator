@@ -11,6 +11,8 @@ import numpy as np
 import sys
 import asyncio
 import aiohttp
+from pydub import AudioSegment
+
 
 async def main():
 # Get the command-line arguments
@@ -67,24 +69,9 @@ async def main():
   # Fill template placeholders. 
   payload= payload.format("das Buch")
 
-  # Call the audio provider to generate the output. 
-  # response = requests.request("POST", url, headers=headers, data=payload)
-  # print(response.text)
-
-  # audio_path_key = """'cpCurrAudioPathVoices':'"""
-  # audio_path_start = response.text.find(audio_path_key)
-  # audio_path_end = response.text[audio_path_start+audio_path_key.__len__():].find("'")
-  # audio_path= (response.text[audio_path_start+audio_path_key.__len__():])[:audio_path_end]
-  # print(audio_path)
 
   audio_path_key = """'cpCurrAudioPathVoices':'"""
   audio_paths = [(r[r.find(audio_path_key)+audio_path_key.__len__():]) [:r[r.find(audio_path_key)+audio_path_key.__len__():].find("'")] for r in results]
-
-  # audio_path_start = response.text.find(audio_path_key)
-  # audio_path_end = response.text[audio_path_start+audio_path_key.__len__():].find("'")
-  # audio_path= (response.text[audio_path_start+audio_path_key.__len__():])[:audio_path_end]
-  # print(audio_path)
-  # Concat multiple audio files to one.
 
   audio_files_bytes = [sf.read(io.BytesIO(urlopen(p).read())) for p in audio_paths]
 
