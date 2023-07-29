@@ -3,3 +3,4 @@ librosa
 pydub
 six
 aiohttp
+pydub
