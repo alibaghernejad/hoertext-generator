@@ -1,94 +1,112 @@
+from functools import reduce
 import logging
-import webbrowser
-from bs4 import BeautifulSoup
+import io
+import time
 import requests
 import librosa
-import io
 import pydub
-from six.moves.urllib.request import urlopen
+from urllib.request import urlopen
 import soundfile as sf
 import numpy as np
 import sys
 import asyncio
 import aiohttp
-from pydub import AudioSegment
-
+import payloads as ps
+import re
+import urllib.parse
 
 async def main():
-# Get the command-line arguments
-  args = sys.argv[1:]
-  # provider 
-  # file
-  # voice
-  url = "https://ttsdemo.voicereader.org/VoiceReaderStudio22_VoicesDemo/"
 
-  payload = "__EVENTTARGET=&__EVENTARGUMENT=&__VIEWSTATE=QVYZ6Q98ddLbWqem%2BaiQp%2BNXlvD8oldCJ2NZ7s7SuhQ8jpiMKh5WIcbFwlb1zrnTN5d68TOL7%2Fg4YeJQmsL2v3ZtGkk2lNindczqonDs4cJsU6idBumJVy5tg%2B9vvabDMCwCCPIGHW31TUbFKeqAolyrFpj8%2FIASCkZ8eBul2GSLRqjiE7n5UEbDpokcVlZN5IBL2LxL5d34svhcWo7YK96DB4QMZ9LlkoNhOac6%2B4hEJmJjAHdK6%2B51bet8DVfswMoizH%2B9tjt4YgF9f4MqxV%2Bael%2Bu1jhgZcDE5GmDHkElHyKMiF3tYslvqXHyDoJxeUrKqVs229ZHBT9%2Bi5ml6XhGrojbCZFAeVKYf%2FID4474Hm03Uuv4WEcSu4AmyL2pmf3zCvxAbZTRe0AStszEUijfGwpvtzBx7lUKWtrro2ITbgIbTigqd%2FvtwLvSghcGTg9a7%2BsBUqAi2O3wBT%2BINUKhEIJn3xNo1GKaDVjyt7GpKnLq9OXdNaqPFhonMB%2BlQN8rVv6k7r0y7CbZNsCA0rIHdfMV7UPCEQyLM3yIZ%2F6e8sqX9yBQcz0nRvjeYRUkMCmTsss38HCn57sThJTAqeTdB0DgHlCtWOb5FHzdZc1DtSFH9wiwpCbapqmmoZkFSVkxmrswYZXSi1oiFUZhLXWrvKH5lwrrSurHTBUSAVfN6May3e0anS5Wkmz5kF7pBOeFiXtoedAxUlzNR8GTTDcMyQ6croRfUWJ1GQuqDwOySw08qaSCSIS4eHigW4wLqG3jf3ieeNaDXgkVCePDof4H379%2FcGlNrX8%2BySBOpvD%2FJoH6AFaZ6yOmOT78Fzx%2Bo8XR8Wui6WWnVmlQMqYF6hBYP%2Boe3FraWyX9uRON103b7nAeMIWdXPF5Zfxd%2FXzs6svGFzGTXkvJLqdwZTPXKnWr%2F%2BzhcCxNWSVUn2jQ%2FjzDCz5hPABIX0rLv7S3csTENKwhlYExsTqHjoW653xE1Bo3Ak1H4GG06sxG8LtXVH%2Bg0HW%2FxRmSdccUdNw2FO3z7YHKZWSNi9EexmvyQYe8d3QvxYyMM4O5FdX63xrMoKWxtqWtWogepKjLi7vWQO4wG%2BHrtc8IIaMs7DhuC%2BC3RRSkf78xtryMiAhuhQBluqPg%2BUtsuszkvdBdPh3MIdTksIz4B4PW2s9ToZwm%2FBLTA4G3%2FhT01AnhB1TP8yLhl0ths1oevReSTm%2FOEZerngegYcmaUBERIGgtBLrtIa72laqtxS%2BEieke6sewJ6lCrMPON3pODyJ8dY5uYHSDcH1XrT8WmbWJsQI0fMd5ikCo6uPyQZaQJqehkuzI9g7J%2FZGWQYy66ROadyouTepB8lnQQhcHm33XJPiYXNfxI74Wv%2BL5u0xlEsJxhToezCG7R9Oj9XLsnobJmZQHdj6D%2BC5eOuipMsTzm9Z1jrb%2FS2OxJA822iVwXH8qTaid%2Fp4D0iq3Vg2gnujX2iPp3JEOJG9fptJxB%2Bymty4UV%2FR5bRgEbqB0VpFMmfPMFmMU99Y3bn1sbj11qOTw0B4AMlV1l0dAVyI33IArN8ag0RbKpgyDyyf9GexarImoid0cd1DmWadEFkrzYvMVtlV%2FTLZgRWO%2BJe6Ue4vM0Pj%2FLW2f6cvgLyx1C88zSb3c3yyEhTttPsowAX93TrdT%2Fva%2FuSfUBeZU6iuYL1XF8Wt9VHiRiM6Af6rg%2FaAojR5fa9YWAyzV3Lyo4tzjmILF4T6UVRS3taJoy8QibawJVZ%2Bzc3nuyyTp2ANqznR3L32w%2F58RL0YgsYeS498gyOYPQkAulKwjSWDMN3y%2FI%2B9J%2FLesJjC5M9CvzQ0olQXmCZJd7tL2FBLa6hsOHG02GXdomY%2BHaCYm%2Fm9YG33flMly0DmUxFaIph705AVhcnCqYM2Ay%2BGv%2FHYiXKpH0TrFFmTLsaObLQ1ot9i3yJQhDzulLPhQR8%2Fn%2BxH6Xt8Rx3QdGsI9lWnCpwbgS6V5rPkh9gwYgxLtpTf%2F2m%2BkUNPnuiR9ugTMyEuD9EK9WQCIUNpvMRR6B6MfJayL4IL3d0H2gGIoigNohxMqFUuerU466rvi5wd3xNy0scYypjD0u40665EEv2yCcATEYyqFEFQMOKxadeWeWIRplcQ43wPNLn3q008NslCYRoPQFRYY4cpWHKbjeN4y3Qt51G4tUdbqztp4%2BcbeD%2F%2BZUUigf5J1xYtWEE01SdPlKuAE1FC%2FX7p%2BZW641xb8KWyTMKTnK4uiHKpO3yRqQDI%2FEm%2FhAmv%2FZtWwewPaKx120Bh1YC9Nx%2BTqq1VRtb5HMDPQFtkPG0YabsAhyFa2UK1G0Dsw9%2BxTSGcD3uk8Ck2yNFvVQY5IqePOSJCSPldR3dHaf%2B%2FMQTV%2BPdTH7WcCNdOfKIYhqHzV7wEz1lV3wN%2FJGu8djvcQttUYyRUIBYVxQmhHPSmGLeZX58SPRsxREPulF43zjnF5qkoyiAIkH%2FuBCWHNCnoRYuL0QXZTbNKGulAeossDzlaQsCDbtr%2F5zcdnsPsx%2BXRclkVgoLo2SaxH6hk5gv4%2BPJdB0WjyGB%2F%2FVTnErbPMOp8qYx%2Fd11tBQe46XfbLJWcBd4e31P6yQJtTKvEPf5umJYsvrMbhR3bEWWonVlPexbqTJAD9nL69UZkh1fCy89gq8%2BALuJFcyENPLah5ZG%2FgLqbW5jrNsJyfq0CY077j4BrmNIiMJ9hLGJos%2Br3ot3YQ4b8yYkEITmLecvTGafTtcCABO8RMvJsI6jjn8%2F%2FwOxxuA7mQZOu5k05YSZcfZu%2B4a%2B7MmlXN8zoVOLp9rqvWbn5ERotxEGI7t5gX2HMgy%2B0nMvJrZZVhM5EgajmYyVsXGdHh%2FGarLYuJS2e%2FRsaPHQqaxIhWuXirnWR1azXHYcllzduqEu2CP5BVqS7AZvd0ThM1PH2wcK38DSDtQahUKg14BazVV1oURDC%2FBSeWJOinyQWZc%2B50FlUP1aEZdKKqt2w3Olhau%2FSnA1gmfmDjT6RyII3EES9rcLY6mRXu5IfiS3NeDohnYl6AN5uZKoEwsJsP65Heo%2BnpoGQW97TU1EVRAELgztWzN40bqNQDX%2BujfBlSqMbItAXB8aDGgZkGEI5au0cBCfveG8T9o%2BoG4aeACubEYmt9AZE7hRPjWEgHRUSSOujQPexpuQNRQCxWkM8WoE7bZBg5Cx2RuInoeptEkk4xzZj2RJnWFoyu5S%2BrHpp4SzSQoGJjbI93SGNbCbhx1zgD7JtCzZzJffRls5eeqQTiB9qs%2B7LTRQYeq8qn0P4%2B2%2FLRu65bXHQErBL9n7c0dqiYNlJZ7ELKRv8PM2pENdu4%2BzV08gG0voXA035JiHDKnW8MdnI233XAKGX1UPZN496hIMsPuO%2FqEOFvWkHRN0ixjZzNo07shxWrQoX5nT6muBIF4HDJHp%2B8pczyHt2Pewiz0xhkz3SnhThNxP7Iwb7p%2BzdySmvIvAw%2FAZ3Opn5dtvagWOtofXRyoSce%2BLygCi%2FK%2FcUKkP9wBoaQAmkm8K51TqA%2F7tg%2BL%2FsynDWE77J%2FjeiHWnDVsTtlVjlqlGN2oSXOgO1v5Lgvj49Eyof4rlyREhCDWDT3p2%2FsV4dsoiBt9%2FTO9V2QzbRA3rwf0XjSbNhyegdl57WZreIASP866vGzb0R9FV6GWqmqKOh%2FM5ufRpsFZn9FYThWuEuyzybxO8O0tosY8Vfzl6rknLHRel%2F4nfIJEZ3XbdaG1oLCbuIGzzVRSKn6LEf%2FIQYpZvnIOLigY8Q369meDxRQDA4AC53YHbsodllQl%2FmYZJrPBeyggbfoM7sjw7t5DEXBqJY091HPHs2MwUtJfXlocvzQ5rXEl9x6ezpa9nUXHrnES4HtBktg1IfiavkjfX0mK68ltU2XA84oGBUk4H0kd4zVGDV1o6tkjc3Uv8W%2BQw85ySFofI7PKE2U1r3zS6YB3s9jG%2FN5zaY5chOFgTaMIEl0TBl1tzowRTBjw6kgaNaYz2C1gLQVrClbQzFvLnG5Y%2Bysm7Leret4qWw3t1Q1HXbjoC%2BEKORV%2FprwEIzQFvm8lvQz41llQtUnv8GjBYVUyeCoiaT1vZc8c6WUITEBrq1LNkclVdim1FNIlfoGF5iN7f3RWjKaQ7hDmZeQn0RpYi%2BNKulqBIPRqzTbcwGCjlOxzN0CIHOCnKyAu2R%2FIYjOy6HknlGFc7zHig1saG19p57jRW%2BILqZhoCB%2BwmYTx0nrQqcijdWbiUMQU3NFHWAXCoxkuUrhoC4cLFkVGEkcqjY2lBuUvSbFCiydVk7kdJsVX%2BcKb%2FRfc0PPpe0PNP9koB0w0v%2BOfzDTxZTND3Tedgs%2BtxJUcgfmjKs%2B0bRq4Trg92ETGBf0HMR8Agvk9pblc8cGrW8Hdgafobe7z%2BHFoSpHK0GPVwZUQ8bD1rG7lPXY2tkBzXGI6oe3GhatcJgCCVOku1t6zpntvrEYUHEfPFtL3tW5Es5NIDhUlTgToZKw%2BfWXcd%2BZ%2FX8dHsH5DxBzvhMjlSqSjNE8tGPwtKL5hjcclz83IfITMFpAq%2BCY5FeeD7Xd4LdBNoDGB0kkfFSZw6hvQ280c9da4rdPaMCYLMYeUfmzC36onhztlk7FGaP0D0cd%2BR0Yo8fk5zDkVmHurnoLdPIceSOLK7wL%2B1LCaQhkRZJdenrPDuSh2gdaJ4BY0Ok4dgOSPpZgPjFN5Sg9r1nECJ7eopWbfjLjKi80cuOcdYOIeYNL5Jw2G5boOHxYaHizfEf6VmIrxT9G%2FvOAGtIoSAVc2PNLEOzIM%2Bjwz2MqQLv3zeTG2rEkLih1XuXaM6HQfKmMdDP1JJoTHaM8Y9AhXltqBSb2SMf69TNssrCgkTTQ9iUVHrUCqgOBNEHRWl2ppy5HftwY39T6pKbuSljqqPweJiwypjrKfaeEA4MjMQWNaVxqOwo2VnX5dRN0Kgyq6GgZSknsMAFhweY54GrV6oI8FgE4QiWqFluXecTAX8dI0VRwqp5LTQPvyAZZWbbcCStxLzk3KiAOMRx7VcBTyqPEWXVqhm3aeo3dJ%2FaKkk%2BwZJwVC6xy8SDgkIQreeGEcuTEZcfky7%2BPUBjLtfNUiXp%2FL17IWHV7cEDqb2v7GHu7MH1sKKFW9yljzV1GIWp0PBcBAvz8c6IekNdJvc6qcCDQ3124t96BV2zzQodegdwM32IFDD6uVz2ADhBd2TIbtAmMZs0rBjJOSe7ERnkTwfDQtT9yko4cwZGcqyAl94O45Jd6abBVL9UktguPwAcMsFQScfjpwOipmQYqXlGMqoN8pAjHciIud0rpZui5Z5qmLgjXiJ9lR8OKdzYbm2ALNPN5nRDqr%2FKkYjhBjGwv3%2B9bWNGUykihdRGBZogSh1bET0mtBpZwB%2F5FJWzESuHC7qXV4%2BC7rET9usVqEw0wI7yujjby7kPb2DwKUNxLhrNZ67meKcEkB6TL51X91RAGQ%2Bv5VW5aJvEC75Xa0vJc8kks2p7q73LIZ2xKOtLwxHXPGEQGGTaPVwicCqCH2Uoky5hEI3xpzXzYyWkHcTwlCCGmTOyQCbyfdcC5kvUPvDyEIsKtZ5jb0qwZNWm7swVocZzsTay5Y%2B6lYHZ2hZA5G%2FdL55F1VdO5SHoB0dtTZs6jTGXNMHqcJj6o5h2fAJn%2BenI0g%2BjTDvRquk1U6Q3p30xkVLEKK9JESirsBitv997iSMmtcyToVx1umwW70ophTCbhYyPUzMrcZx3llU1g2eNyD3KWbVGYW%2BtZnvIsxOMEo3xdEnYrpJtJ9dKG9ff7GurRBsGI0ET0R00qmuPcWqCldOswcYURnAhFAKWy74%2BMYoimGRphPZeVqtSV8SPgATCJA7s2kovQnvrD0LsyQfnUybqfMToqBgzcP2yu2DD6SBuYY2wP%2FzMr%2Ftp8dFLDmlhuFSQdX9EJmL0BUG0cHC95gmMMSdLHWh8r2hIOXutovmNnHDB0OcgJQHd5sfdLtd76yP1lYj8HPz%2FvPBCQH7GsCwPp%2FFBSntCBC4u4kBEIYoayR%2BnumnRYpYEUgOKkYA9vMkTR8eCFx3ipHz30FXDq%2FtpH7Byi7Iytd1lXJf%2BCvvJwXb5jHLabfmrTDadkKuRGf9Sfp6C%2FdD4820uUabC4dBD%2FgC%2BHEOUWtMVStDpXo8oYUqoWQwz16WnAdcy4StDXKZdQNM55zJ1ZY%2BhAYFMOYt3nk1vSGLb%2B0su6dikNE4aFyyncfUNaCrbrY8%2B1l%2B4aLKFamOIkBh%2BVGZAx2uGRBtWoXllccog%2FZ6sdMMU%2FMXcr0ae6wwSZkYKA8KKUKepOrra54iptvVYbJlqStgFFd2Xy0ijPQbQmPhdoyUHlKUkV3pn%2BpRqFRziJcgwb9LwQ6rCh51BzoANh5hNIQqFV2PLGlEYdqae5kmDekkAgEePmvfLEOoTND%2FYI5ZSsau8p18h71fMH6LG313qM70CtrEEe0rHtWd5swSC3gsaVzD7k%2BT5tM4TQDz%2FutIaD1orFFLnecfO%2F3b9ZFnr6CHMOo1MLNklMMkMi3JSzxdJ8SL%2F52vtkp1m3s6MGOvPOZMwPGeNtypZs%2FawfZNTaCvo134qqeJo5mj331PsDaRp%2FWRVz%2BMCVGI75gsml2wtR2%2B%2FFa2UgJyvKn9ePeVZAKQAQZJfIgdlu8%2FUdGcoXUNg4UmvVzBTPt0xy3oG5AezrRsJZGgMWanJavugDz1wydTHBBU8V9sE7rRv2nXXRF%2FQqzVUfWEvxIWPvaQab0OW%2B%2FemvCL6rdZB0PPP0IJO2cvVYX7FivbTP3WA1hFNpVxZfuXf1jHOH4t1DcEI1CpUI3ZtdLEyU6UzG86hWNPtrC1DwBQT2mEXNEhGaw5PqtyTJ2vMrLNO55syez82tnWvI3aqh8QavRlH12uvZMNw%2FBEmBPtEz5uiUgx5eFO6qmj4021J9Tsey3eOS6IzL3YbdaAtHTJtR7N0%2Bq70KoTCiHHQlYGGTb1Y8xhZuFiCPxTTVaYn3vZiMbTteb%2BATTx2xvdgiTGjXIKcuhkPnl4WubMrgDL06cAzFgf%2Fub%2BdZWD1w2pAq20JPEiJjqWSbEBvEtJZpl52xhkdMnOg58QUjyWtDX3aqqyfVjylV6Njm7Yil%2F6N%2Fr9C0sPabp%2FVVGxG9%2BsdIurOMrb6E5k84i780mHCm%2FW7aXVqF9udA2jURE6PEwtR4lVJyV7CILr1exgw6I0gBjjYynTaQ8YzOtc4%2Fze75paa5LwCiXWizuY%2B8t5JoXiscu2eO5omqrav2a6M%2BaXCNvYIvnJp9prx9W5hGlL7Z39YvHJ72nCXTQZo3hLjb3UY328BKkBl6Pefrb%2BPe69YNE40GpFLG1i7wG7GWzO8GQpnIHGaIgZchPzufa7tAiIFix5nhnp%2BmStRgC3vrAU9%2FI0Z%2B3jwTO4tBK5lTLS6PrU0WHohnqbXOJ%2FdCXil%2FjXJxp4VsIs8KRVhirMiafOM6Z0dnAPAjTG9VSrSW6Ooe4hdq2jnRtjKOgZ5SU9bSHydS9VUoP6Wk4EJX2B6dKwE5HHrngeJcn8ls2C9mH4uEwj5AEETKiFAMYWKORfNl8m7GBmU8FkLvGw6QK823LZpzdOIKHSGTzRZJypYCRoZZd%2Bvf%2FqdwsDjU6DcE4ERjGqNBuJATxI%2BWj1tmRx2Bt1mHibS6%2Bo7Zk6rw2%2FgsJv9Y3yqrdb2rFXKjBMUCJSBTI83nDvFV5mGls0z4BqVw7wi9xoL%2BxcM7LoPgV7bVuBHmc4QtkRIfpprRhiXaS1J%2FSiVKXagg0qvxmyrMeifAOYdhukZxinCKzNI%2BzpBHqrmc%2Br72X9wxa3pIZ4A5v%2FsCPJ6B41a2SWLTU7N81uySnVafPODazXc%2BjeIlTIrybxJMCQpzeG%2FkPlRMyGKcrueTfENgTSy92b%2B5vNhVHOYGl3e5B19idcTdsFjjQBY4mCsZZWOUX7yDsZUUXJOlpH1DzY4czUPTYMVh%2FgfyGE%2FbuawmkoU%2BfEic%2BpFxzGAi8cmnaBAtCE4b0awC26OJeZQuMLHcxaWtFK94VKdvcguCpWAIGqRNvEtEGnaAsiqpKd1EutKDPgUYG9MdeCjlGCXCO94%2BqWDLgNBUvOuyXt%2Fb4WBPqf2Wl98apLKxu7bDQFlZARPqY3iA2jeMObML31kecqvTmwGUL4qT4ZrDi6QaZrdThZ9%2BCSema6Svuk50897tsm8WkXNE39%2FHFW8aNghD4n4dc8ajUYLdwACbgtKk7DCW7U3YR5ktGdknAMVputMvslziBCBLPWgniTwasGrGoNPHyQ0Oqz%2B5zf4LJBpg4m%2FiLpofZAeP60zhvc2fzOaENc%2BhgMEYZzpfaKPTpdM%2BEBVhuEg9vcHXpzE%2BuMfhNesozCox7rlznx4ckxhuuLDXqw6PWDPl6UpxzV863tgPQD2Kj%2B1LqUbg%2FpBswfC6SiVNGHmidtKyY8uoJoTTysnGsG3fIV9LPocs7XajUS0rJbeDQJ3hg1euxasNMmif9CbqpmzeW%2FN20S83flImskQ3fwX2s3LfaHg2%2B4z0qc0QHomObvQtDMmw%2F%2BJK6ozHdTcg3JaPbASaA%2FFi0j0GaIxjaP0s1sMFELbz2GcQ8vx%2BDKHxgJAcxJUBDf%2BgyJPubGCUqtdhUmQNBFtCNcAPXm2I1OagL79DaM0ebL4207QZUr8bALdAwGQbek1rwCLXVwbnt%2BrmtUeScuR4Z3VZHRAy52nR25aALeUsBL8WJq2VydJcdnmxTOt4uEznANd221efo5QCfUYwdUqyrX7w7SqspLXdhXaLxiL3zXeiZiZZAMk5hoqIls4CWNLSyoapGdL1ujNxRhq1WRKrVtoJYa9i7qc8SKbu90%2B%2BQRMsx6ZRoM3ImF3FzFt5GkuFW90QFLzT9888NPtud%2BwZgHjzc2NXvWquUOILYGd1saX%2B1l7KEoOmgewow290APG4Us7hK2t%2FCjqMa5PHIKFjS5n3YcIEN31XOcj7kouaitgUc9ZwnDCwufNgbiquPkY98JSJE7Rd%2FXubwmMgTkxpN9r2%2FTA3KSxN6t5OCp7bQpvSb6sQbYMKaM9pNIIt95U6RgOxnL8hjxs7OpOSj9lpYIjfjU%2F2cF10dkLVWp8BKzXzOsBjAZ6wJz9Zds31j5gmREiIGtWxRlaSvG6caN%2BRNZLo0sGHa%2FhuIz3aQrEA0umb8Cd2XzPfmGSlOyHx8tcjSYsFksOHRDsqObuiQGhvCvwec7Oi8cw%2FJNed8UJCh4rpGqhjeVL63arogGjfzoOW03bDPI%2FOguZYxkLNc0NFHuXM4p5jbvZJNbJlQI8a%2F3mPao1VnhA05Ii9cgu7hMlcORrM7Fggw7LA8GjOndcuAI3fmTKF31MknodTHTDn%2BmAUExiT1etOS%2BSV5fOoHssvI6pAgdossoShj2d1k2li5At9uxTiNjd6wc6SECUell1RgNcVBnsoUMkNlEa8EABXmgfv7Lt4eYMVCgmipAd4HnkRYpYirjiFdqUE7UtntvoofhKSWy6M%2BGhV7B9ZlbjCUUlLMd3vs4G5PgHN7AgXaLVI9e6Na4sMCwo%2BOxbslh60XxfhCcLfO6v8zK%2B2uP5BHBQoVyFdaCZGHgiAx6itus9%2BhSfhHzT56kppNCRPMlyN7DXmhyEMLfoXT1E45xb%2BwH5SZAkGq4VRo2pNLAWjNlVAs55JleDttz3B%2FWuDFrVHlUnFkLh5UehU8UKj3HcD4aO5fMAk5P%2BT%2BnDa1yG5H4DC5F%2Br81usK2lDwGioRgX7RE9hutXHhIwpZ8dKDEUXV0iNY23%2B06ZDuvlAauW0qYlK48Tl4sEsNw5onQCC%2B5UDWF8NUt4s37sOosTDpSqpv2lHpGub65VCix047%2FUv6srTzlnPxlA%2FutmWb4Bxp4ITIOSaa1IuO3yHa8u0QElVloGfEKPbOL5%2FlUBq8Cth%2FpqEekyEwm2cZ1PeVWwhuHMG2n6G5baGzdKDGpsUcyCL4fuf1YKaFkAu0j7eKVn3DtkDkabs6hGlC%2FZuyPKIGHYLNS%2FaxzGltUzZ7J8W%2BN5%2BtQacSWoj4bSSA5bhbLGdRjWqmpu98QTMRaj5ObJOHxe4m%2FdTNr6067TvLuidzH2nsAX34ua4F3I3d766y3xY2b%2F%2BCf9vRH0%2BrITEsCNiVvZGmhjWQYW8peQNN1L7L2PhaCmlDxXJHHT9sMgmiVRflBBDtJVDwrOEbLEbr8thCC8RhfnrguBjTPSku8rlW5kHD1LWEyA0bfXfjGpahTB1xatQmQW3NnT1yx0AVwQ8%2B7iEm9MuQrj%2FjXZ%2F4ERWGS%2BoMFh592DsUEsG96BS%2BxY1mnwErDxCA9U6ihl259Gdbwkh%2BpYeDkPElo8YUH0KyatwqLHCQbxA%2BfJ54p5S4JOUHcVNVxkMXYmI%2Fib%2Fyotj1ltjzW5SKyOJqPwF5E%2FmpF%2BWqdqZSomtFIXK6tRUC1i0ctwLcuPumXi95bJll2U3Qmj%2FV7D6ToclixVNRnZ47fQV006MaJEfYQOFv4PmvauZPxj1ooAJlwGGJ9G1cxVT64M%2Fp6rVID3rAIfHMOx2YSpwHnKBSRg52N7upiosS6srT6URIZ6sfsOkictSjEFyhkMXNk%2F%2FuQ6I72%2FurzlOPpKODdi1AtgxeZnyMIVD8riFaEjsFjAePUm1RCALsEHYrJ0UxgIwaPHbgUXL1%2B76VYKVN1fB5xc0p2opzS2KHdehw8PwHpVYzmPdhdYVw71%2B9Az3dGXSldFg2fELtpxcLa%2BoHfKle4XIP6kSyPeHz0mey1mCtJVDfMH337faRhO9HHJWbQPD01hjP3xYNiaWWMidWOWFlxbF%2BZYgPiJpKOFQ8HZtm0bP5bseXlbZLzOwciVaPcTO9W1GkcaS5tGNG%2FV42UuErTUDE1moYZR6kLW6UxUdb%2BnT%2BdSWwCYkKAs9AW9ZxmlwSvFsJDleoVNGgQO7Z%2F%2FipJQ9rV5OCpQr4OyIDPDSWoUVXBXBUaoM%2Bq8Xc%2FjLV8A%2BhztIgCzoV87nsZtOaMTBbXfTbvMQFtC7Vfk0g770YZYNXx70mUb0HJtZubO0KC1KdGBdotS0RVzEgczQeUfS77xOep0qg9qQOnOXdgTOAXLXknc7slIVBnsO7Pldpwm1PQIbamIZWTBqGlq1Rwkc%2FHX%2FykFyOvZYMWaLAXXNp2D1L9zTGs1SOOLoV5q0W2JxLKHW6y8qNg0%2F4QtN%2FsJXdlaZCLk6fggj5LACfc7yIn2pOQ607qpMJVh1dwyDPCe0zWhLPb0P6nIN35oWXiBKgq7q9b6mOlz9p3J6VFnGu0EAqeS4qdkSX6Cfa5cC020TsDO1qYJs3pCAIs0wUJnP5BSxNHlm3AjoU%2BAhmplb%2BPw74jyKxrWni4%2FoT%2Brv7F3aoqT3XKkmSeYIlFMX4dRM%2FDlVCa4KRsL%2F1e1tXJJnTcRsCKveWrdPTsIaMWEGIY4r1cmo3%2B0%2FdyivI8w%2FO6j9b1GgV05iBKlwb13x%2BHxSY43YCP9asO7Q9qe097BSpbD6d7p9r%2FGDaJp%2F3aA%2F3h5Po6VKWC2X3folyBF2MzEC74nIJW4XJ1jx2X0pz7nWPYQxs8ypcpC1QJHfmBvkHs7vJd%2FCSftAkSMDbqlkkAIx%2FImvfU3BUNCVvZeFS3vd3OybnXE2EJgWUPSrqZ5mahyCArhs4qfHEnNkLFeDzAm5kQod0nI2YrifAm3Gai831FqcpK4JFmSeE7cnL5aQSPZxaz9qmbDxDguNlVNs3cKG9suO72PKn4oZ%2FKuvSacAVixacHOP5yjrBQB3nmjlEZPEsTY9LKOSJCRYFA6JAZY7r9OF%2F9Vt78jPT6VHWB5iwXg5ndbka1jtoTTdtwzyMpNDavQJmnhELH3Ee07L0%2BLExhqf3nVi4d3XDyEYffVWOqFuJjs6m12KH%2B%2FiB0IE94X%2F%2Fubu1CMtQvPdH9upFd8eiy%2BWMClfkLZ%2FdGNidW0Q3Gln7AGOj1swc5sZl4FIaWYzI8njSKLjOIMmpNAyUCmq9wG44CACjIfsyY49GPU8zLhKyxuVpZIAICl%2F204gnqC%2FzPqCbUw4w5SQbQyHbUUGsFG0OWPck0YJ9m05C%2Be%2B7tVT9gT0YFuggaFefijPY%2FCc7YuCRlWq7iwWu6%2F9UkAUBse1Sqz12Ay%2FnCMrTFVtm9aJX%2FAdaw3ZmrY5WHjs30ZOlXcmNOA2Z8ytKKSHNNmAANsP7ZunCuhuFNMCYB%2FEZM39NifoXxJUY9qtlYWvO5h8mt%2FpIP3QnzXdKxZD%2FQNuq9sNtzXBOqjPFUTE7eCmtR0OS768ZsUuiiCCbWh7PrpCKV97AdrOb7tL7N9ulUUAmMge92KdPwwGoIusrUjSOQIrpd8dJiPLpWsi23yfQuH3gzlCBdLSr6FPsdHKmjSlwHh0EoK%2BUZoEAdV3UUaAcWtx1B4m61beRCNXZfQNccsjlK7mHFGV52HKG4OpXpNlQbngFTB%2B%2F8xhElfErb8iYwbB%2BSV1ZyEB0A%3D%3D&__VIEWSTATEGENERATOR=B52DAC15&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24demoTextEdit=Lektion&Content_MainCallbackPanel_MainFormLayout_languagesCombo_VI=ged&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24languagesCombo=Deutsch&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24languagesCombo%24DDDState=%7B%26quot%3BwindowsState%26quot%3B%3A%26quot%3B0%3A0%3A-1%3A0%3A0%3A0%3A-10000%3A-10000%3A1%3A0%3A0%3A0%26quot%3B%7D&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24languagesCombo%24DDD%24L%24State=%7B%26quot%3BCustomCallback%26quot%3B%3A%26quot%3B%26quot%3B%7D&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24languagesCombo%24DDD%24L=ged&Content_MainCallbackPanel_MainFormLayout_voicesCombo_VI=Anna-Ml&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24voicesCombo=Anna-ML&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24voicesCombo%24DDDState=%7B%26quot%3BwindowsState%26quot%3B%3A%26quot%3B0%3A0%3A-1%3A0%3A0%3A0%3A-10000%3A-10000%3A1%3A0%3A0%3A0%26quot%3B%7D&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24voicesCombo%24DDD%24L%24State=%7B%26quot%3BCustomCallback%26quot%3B%3A%26quot%3B%26quot%3B%7D&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24voicesCombo%24DDD%24L=Anna-Ml&Content_MainCallbackPanel_MainFormLayout_stylesCombo_VI=default&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24stylesCombo=normal&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24stylesCombo%24DDDState=%7B%26quot%3BwindowsState%26quot%3B%3A%26quot%3B0%3A0%3A-1%3A0%3A0%3A0%3A-10000%3A-10000%3A1%3A0%3A0%3A0%26quot%3B%7D&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24stylesCombo%24DDD%24L%24State=%7B%26quot%3BCustomCallback%26quot%3B%3A%26quot%3B%26quot%3B%7D&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24stylesCombo%24DDD%24L=default&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24voiceSpeedControl%24ASPxFormLayout1%24trackBarSpeed=%5B100%2C200%5D&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24voicePitchControl%24ASPxFormLayout1%24trackBarPitch=%5B100%2C200%5D&ctl00%24Content%24MainCallbackPanel%24MainFormLayout%24voiceTimbreControl%24ASPxFormLayout1%24trackBarTimbre=%5B100%2C130%5D&ctl00%24Content%24MessageBoxState=%7B%26quot%3BwindowsState%26quot%3B%3A%26quot%3B0%3A0%3A-1%3A0%3A0%3A0%3A-10000%3A-10000%3A1%3A0%3A0%3A0%26quot%3B%7D&ctl00%24Content%24playDialog%24playAudioPopupCallbackPanel%24PlayAudioControlState=%7B%26quot%3BwindowsState%26quot%3B%3A%26quot%3B0%3A0%3A-1%3A735%3A361%3A0%3A-10000%3A-10000%3A1%3A0%3A0%3A0%26quot%3B%7D&ctl00%24Content%24playDialog%24sndParams=%7B%26quot%3Bdata%26quot%3B%3A%26quot%3B12%7C%23%7CCurrAudioTextVoices%7C4%7C65%7C1In%20der%20Online-Demo%20k%C3%B6nnen%20maximal%20350%20Zeichen%20vorgelesen%20werden.CurrAudioPathVoices%7C4%7C110%7C1https%3A%2F%2Fttsdemo.voicereader.org%2FVoiceReaderServer22DemoService%2FFiles%2F0d551e27-17de-4c48-9c9f-081801f831e7.mp3%23%26quot%3B%7D&ctl00%24Content%24addPauseDialog%24addPauseCallbackPanel%24addPauseControlState=%7B%26quot%3BwindowsState%26quot%3B%3A%26quot%3B0%3A0%3A-1%3A0%3A0%3A0%3A-10000%3A-10000%3A1%3A0%3A0%3A0%26quot%3B%7D&ctl00%24Content%24addPauseDialog%24addPauseCallbackPanel%24addPauseControl%24ASPxFormLayout2%24trackBarPause=%5B100%2C10000%5D&ctl00%24Content%24addPauseDialog%24addPauseCallbackPanel%24addPauseControl%24ASPxFormLayout2%24textBoxPause=100&ctl00%24Content%24hfParams=%7B%26quot%3Bdata%26quot%3B%3A%26quot%3B12%7C%23%7CaddCode%7C4%7C38%7C157928b99-e236-4f5d-9298-5301df1d4af0_speedTitle%7C4%7C13%7C1Sprechtempo%3ApitchTitle%7C4%7C9%7C1Tonh%C3%B6he%3AtimbreTitle%7C4%7C8%7C1Timbre%3A%23%26quot%3B%7D&DXScript=1_11%2C1_12%2C1_252%2C1_23%2C1_64%2C1_13%2C1_14%2C1_15%2C1_42%2C1_48%2C1_17%2C1_9%2C1_60%2C1_183%2C1_184%2C1_21%2C1_22%2C1_190%2C1_186%2C1_193%2C1_41%2C1_189%2C1_204%2C1_182%2C1_32&DXCss=0_2775%2C1_68%2C1_69%2C0_2780%2C1_209%2C0_2694%2C1_210%2C0_2689&__CALLBACKID=ctl00%24Content%24MainCallbackPanel&__CALLBACKPARAM=c0%3AplayButton_{}&__EVENTVALIDATION=99bbenSbnvVgSry46aOc1nuqD5bDhfZ%2ByiU%2Bdwg1Uci889KEjfDHn4tTxs5JHsDlaKIBypCA5ndDxPuBTvRotlKo%2BWQdtijcjbcdWdzJF7FwPBxVOT7ENaDmgHQ08FgAOuAgScpTBDN5kimEuPVXJOUz9renDyAZ5A0YUHcQ1iE7%2FNej8dbf%2FKnWg%2BQ8vLfGll%2FOtgfUE5ZiV2NviDhPNWU9fSnY0a%2BlIGTit0N7IzgcnYUOoNAI%2FSKRAptrxW2dpiWlkd2ixkZLetkv%2FeXlK8dRqsK51J7tHAGyshejYDr2TnKS5ckxkysN8KztZCqwhW2iBkpf87d8n1rPj7j8Ow%3D%3D"
-  headers = {
-    'authority': 'ttsdemo.voicereader.org',
-    'accept': '*/*',
-    'accept-language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
-    'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
-    'cookie': 'ASP.NET_SessionId=q0zhpwfozo0yxo2n33nanqx4; ajs_anonymous_id=3ca974ca-6dbe-46c4-bec6-4a4bbffbe9af; VRS22VoiceDemo=guiLanguage=de-DE&selectedLangTlw=ged&selectedVoiceName=Anna-Ml; VRS22Demo=guiLanguage=de-DE&selectedLangTlw=ged&selectedVoiceName=Anna-Ml',
-    'origin': 'https://ttsdemo.voicereader.org',
-    'referer': 'https://ttsdemo.voicereader.org/VoiceReaderStudio22_VoicesDemo/',
-    'sec-ch-ua': '"Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114"',
-    'sec-ch-ua-mobile': '?0',
-    'sec-ch-ua-platform': '"Linux"',
-    'sec-fetch-dest': 'empty',
-    'sec-fetch-mode': 'cors',
-    'sec-fetch-site': 'same-origin',
-    'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
-  }
+    # Load the text template, used to generete hoertext.
+    # Ignore whitespace and empty lines.
+    file = open("sample3.txt", encoding="utf-8", mode="r" )
+    lines = [line for line in file.readlines() if line and line.strip()]
+    file.close()
 
-  # Load the text template, used to generete hoertext.
-  file = open("sample1.txt", "r")
-  lines = file.readlines()
-  file.close()
-  
-  # A list of requests to process
-  payloads = [ payload.format(l) for l in lines]
+    # A list of requests to process
+    locale_de_DE = "de-DE"
+    locale_fa_IR = "fa-IR"
+    pattern_section = r"\#\["
 
-  # A function to make an async GET request and return the response content
-  async def fetch(session, url, payload, headers):
-    async with session.post(url, data=payload, headers=headers) as response:
-      return await response.text()
+    def request(l,r):
+        return [(str(ps.payload_de_DE()["url"]),str(ps.payload_de_DE()["payload"]).format(urllib.parse.quote_plus(l)), ps.payload_de_DE()["headers"])
+          if re.search(locale_de_DE, r[0])
+          else 
+         (str(ps.payload_fa_IR()["url"]),str(ps.payload_fa_IR()["payload"]).format(urllib.parse.quote_plus(l)), ps.payload_fa_IR()["headers"])
+                                                        ]
+    
+    requests = reduce(
+        lambda r, l:
+        (l, r[1] if re.search(pattern_section, l) else r[1] + request(l,r)), lines[1:], (lines[0], []))
 
-  results:list[any] 
-  # Create a session object
-  async with aiohttp.ClientSession() as session:
-    # Create a semaphore with 10 permits
-    semaphore = asyncio.Semaphore(10)
-    # Create a list of tasks with the semaphore
-    tasks = [asyncio.create_task(fetch(session, url, payload, headers)) for payload in payloads]
-    # Wait for the tasks to complete and get their results
-    results = await asyncio.gather(*tasks)
+    # Select reducet list of payload.
+    requests = requests[1]
 
-  session.close()
+    # A function to make an async GET request and return the response content
+    async def fetch(session, url, payload, headers):
+        async with session.post(url, data=payload, headers=headers) as response:
+            time.sleep(1)
+            return await response.text()
 
+    results: list[any]
+    # Create a session object
+    async with aiohttp.ClientSession() as session:
+        # Create a semaphore with 10 permits
+        semaphore = asyncio.Semaphore(10)
+        # Create a list of tasks with the semaphore
+        tasks = [asyncio.create_task(
+            fetch(session, request[0], request[1], request[2])) for request in requests]
+        # Wait for the tasks to complete and get their results
+        results = await asyncio.gather(*tasks)
+        logging.getLogger().info("All of the scheduled tasks have done.")
 
-  # Fill template placeholders. 
-  payload= payload.format("das Buch")
+    # Fill template placeholders.
+    audio_path_key = """'cpCurrAudioPathVoices':'"""
+    audio_paths = [(r[r.find(audio_path_key)+audio_path_key.__len__():])
+                   [:r[r.find(audio_path_key)+audio_path_key.__len__():].find("'")] for r in results]
 
+    intro_name = "intro.mp3"
+    outro_name = "intro.mp3"
 
-  audio_path_key = """'cpCurrAudioPathVoices':'"""
-  audio_paths = [(r[r.find(audio_path_key)+audio_path_key.__len__():]) [:r[r.find(audio_path_key)+audio_path_key.__len__():].find("'")] for r in results]
+    # The silence chunk between each element.
+    logging.getLogger().info("Generating silence chunk...")
+    silence = np.pad([], (0, 3 * 22050))
 
-  audio_files_bytes = [sf.read(io.BytesIO(urlopen(p).read())) for p in audio_paths]
+    body_bytes = [sf.read(io.BytesIO(urlopen(p).read())) for p in audio_paths if p]
+    body_bytes = reduce(
+        lambda r, v: r + [(silence, 22050), v], body_bytes[1:], body_bytes[:1])
+    logging.getLogger().info("Generating silence chunk. Done.")
 
-  #data, samplerate = sf.read(io.BytesIO(urlopen(audio_path).read()))
-  # Consider first audio file sample rate a default sample rate.
-  data, samplerate = (audio_files_bytes[0])
-  finalData= np.concatenate(list(zip(*audio_files_bytes))[0]) 
+    # Consider first audio file sample rate a default sample rate.
+    _, body_samplerate = (body_bytes[0])
 
+    logging.getLogger().info("Loading Intro...")
+    intro_bytes, intro_samplerate = sf.read('intro.mp3')
 
-  # Save an audio array as wav
-  sf.write('stereo_file.wav', finalData, samplerate, subtype='PCM_24')
+    logging.getLogger().info("Writing body chunk...")
+    # Save body chunk as a an audio array as wav.
+    sf.write('body.wav', np.concatenate(
+        list(zip(*body_bytes))[0]), body_samplerate)
 
-  # Convert wav to mp3 using pydub
-  sound = pydub.AudioSegment.from_wav("stereo_file.wav")
-  sound.export("output.mp3", format="mp3")
+    # Convert wav to mp3 using pydub
+    sound = pydub.AudioSegment.from_wav("body.wav")
+    sound.export("body.mp3", format="mp3")
 
+    # Load intro and outro audio files.
+    intro_bytes, intro_samplerate = librosa.load(
+        'intro.mp3', sr=body_samplerate)
+
+    body_bytes, body_samplerate = librosa.load('body.mp3', sr=body_samplerate)
+    combined0 = np.concatenate((intro_bytes, body_bytes), axis=0)
+    sf.write('combined.wav', combined0, body_samplerate)
+
+    # resample the intro to match the sample rate of the main
+    # intro = resampy.resample(intro, sr1, sr2)
+
+    # combined = np.concatenate((intro, main), axis=0)
+
+    # sf.write('combined.wav', combined, sr2)
 
 # Call the main function
 if __name__ == "__main__":
-  asyncio.run(main())
+    asyncio.run(main())
