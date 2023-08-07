@@ -1,0 +1,26 @@
+#[voice:"Anna-ML";lang:"de-DE"]
+Sicher B2 Lektion 10, Wortschatz
+
+#[voice:"Anna-ML";lang:"de-DE"]
+die Begleitung
+#[voice:"Dariush";lang:"fa-IR"]
+همراهی (مشایعت)
+#[voice:"Anna-ML";lang:"de-DE"]
+in Anspruch nehmen
+#[voice:"Dariush";lang:"fa-IR"]
+استفاده کردن
+#[voice:"Anna-ML";lang:"de-DE"]
+die Dienstleistung
+#[voice:"Dariush";lang:"fa-IR"]
+خدمات
+#[voice:"Anna-ML";lang:"de-DE"]
+die Dienstleistung in Anspruch nehmen
+#[voice:"Dariush";lang:"fa-IR"]
+از خدماتی استفاده کردن
+#[voice:"Anna-ML";lang:"de-DE"]
+die Unterbringung
+#[voice:"Dariush";lang:"fa-IR"]
+محل سکونت (محل اقامت)
+
+#[voice:"Anna-ML";lang:"de-DE"]
+Und nun kommen wir zur Ende. Bis zum nächsten Mal!
