@@ -1,3 +1,9 @@
+"""A simple Hörtext (listening text) generator, that helps you during learning."""
+# Python module wrapper for _functools C module
+# to allow utilities written in Python to be added
+# to the functools module.
+# Written by Ali Baghernejad <alibaghernezhad@gmail.com>,
+
 from functools import reduce
 import calendar
 import time
@@ -17,6 +23,7 @@ import payloads as ps
 
 
 async def main():
+    """Entry point of the Hoertext generator."""
     # Load the text template, used to generate hoertext.
     # Ignore whitespace and empty lines.
     file = open("sample4.md", encoding="utf-8", mode="r")
@@ -28,22 +35,22 @@ async def main():
     # locale_fa_ir = "fa-IR"
     pattern_section = r"\#\["
 
-    def request(line, r):
+    def request(line, acc):
         return [
             (
-                str(ps.payload_de_DE()["url"]),
-                str(ps.payload_de_DE()["payload"]).format(
+                str(ps.payload_de_de()["url"]),
+                str(ps.payload_de_de()["payload"]).format(
                     urllib.parse.quote_plus(line)
                 ),
-                ps.payload_de_DE()["headers"],
+                ps.payload_de_de()["headers"],
             )
-            if re.search(locale_de_de, r[0])
+            if re.search(locale_de_de, acc[0])
             else (
-                str(ps.payload_fa_IR()["url"]),
-                str(ps.payload_fa_IR()["payload"]).format(
+                str(ps.payload_fa_ir()["url"]),
+                str(ps.payload_fa_ir()["payload"]).format(
                     urllib.parse.quote_plus(line)
                 ),
-                ps.payload_fa_IR()["headers"],
+                ps.payload_fa_ir()["headers"],
             )
         ]
 
@@ -123,7 +130,7 @@ async def main():
     body_bytes, body_sample_rate = librosa.load("body.mp3", sr=body_sample_rate)
     combined0 = np.concatenate((intro_bytes, body_bytes), axis=0)
     unix_timestamp = calendar.timegm(time.gmtime())
-    file_name = "combined{}".format(unix_timestamp)
+    file_name = f"combined{unix_timestamp}"
     sf.write(f"{file_name}.wav", combined0, body_sample_rate)
 
     sf.write(f"{file_name}.mp3", combined0, body_sample_rate)
