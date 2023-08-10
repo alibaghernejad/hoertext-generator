@@ -1,6 +1,5 @@
-beautifulsoup4
 librosa
 pydub
 six
 aiohttp
-pydub
+resampy
