@@ -1,19 +1,18 @@
 from functools import reduce
 import logging
 import io
-import time
 from urllib.request import urlopen
-import requests
+import asyncio
+import aiohttp
 import librosa
 import pydub
 import soundfile as sf
 import numpy as np
-import sys
-import asyncio
-import aiohttp
 import payloads as ps
 import re
 import urllib.parse
+import calendar
+import time
 
 async def main():
 
@@ -24,13 +23,13 @@ async def main():
     file.close()
 
     # A list of requests to process
-    locale_de_DE = "de-DE"
-    # locale_fa_IR = "fa-IR"
+    locale_de_de = "de-DE"
+    # locale_fa_ir = "fa-IR"
     pattern_section = r"\#\["
 
     def request(l,r):
         return [(str(ps.payload_de_DE()["url"]),str(ps.payload_de_DE()["payload"]).format(urllib.parse.quote_plus(l)), ps.payload_de_DE()["headers"])
-          if re.search(locale_de_DE, r[0])
+          if re.search(locale_de_de, r[0])
           else 
          (str(ps.payload_fa_IR()["url"]),str(ps.payload_fa_IR()["payload"]).format(urllib.parse.quote_plus(l)), ps.payload_fa_IR()["headers"])
                                                         ]
@@ -64,8 +63,8 @@ async def main():
 
     # Fill template placeholders.
     audio_path_key = """'cpCurrAudioPathVoices':'"""
-    audio_paths = [(r[r.find(audio_path_key)+audio_path_key.__len__():])
-                   [:r[r.find(audio_path_key)+audio_path_key.__len__():].find("'")] for r in results]
+    audio_paths = [(r[r.find(audio_path_key)+audio_path_key.count:])
+                   [:r[r.find(audio_path_key)+audio_path_key.count:].find("'")] for r in results]
 
     intro_name = "intro.mp3"
     # outro_name = "intro.mp3"
@@ -95,15 +94,16 @@ async def main():
     sound.export("body.mp3", format="mp3")
 
     # Load intro and outro audio files.
-    intro_bytes, intro_sample_rate = librosa.load(
+    intro_bytes, _ = librosa.load(
         'intro.mp3', sr=body_sample_rate)
 
     body_bytes, body_sample_rate = librosa.load('body.mp3', sr=body_sample_rate)
     combined0 = np.concatenate((intro_bytes, body_bytes), axis=0)
-    fileName = 'combined{}'.format(time.clock_gettime_ns())
-    sf.write(f'{fileName}.wav', combined0, body_sample_rate)
+    unix_timestamp = calendar.timegm(time.gmtime())
+    file_name = 'combined{}'.format(unix_timestamp)
+    sf.write(f'{file_name}.wav', combined0, body_sample_rate)
 
-    sf.write(f'{fileName}.mp3', combined0, body_sample_rate)
+    sf.write(f'{file_name}.mp3', combined0, body_sample_rate)
 
     # resample the intro to match the sample rate of the main
     # intro = resampy.resample(intro, sr1, sr2)
