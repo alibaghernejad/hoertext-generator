@@ -3,6 +3,7 @@ import calendar
 import time
 import logging
 import io
+from typing import List
 from urllib.request import urlopen
 import asyncio
 import re
@@ -66,7 +67,7 @@ async def main():
             time.sleep(1)
             return res
 
-    results: list[any]
+    results: List[any]
     # Create a session object
     async with aiohttp.ClientSession() as session:
         # Create a semaphore with 10 permits
