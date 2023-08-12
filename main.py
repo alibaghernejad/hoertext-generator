@@ -26,9 +26,8 @@ async def main():
     """Entry point of the Hoertext generator."""
     # Load the text template, used to generate hoertext.
     # Ignore whitespace and empty lines.
-    file = open("sample4.md", encoding="utf-8", mode="r")
-    lines = [line for line in file.readlines() if line and line.strip()]
-    file.close()
+    with open("sample2.md", encoding="utf-8", mode="r") as file:
+        lines = [line for line in file.readlines() if line and line.strip()]
 
     # A list of requests to process
     locale_de_de = "de-DE"
@@ -71,7 +70,7 @@ async def main():
         time.sleep(1)
         async with session.post(url, data=payload, headers=headers) as response:
             res = await response.text()
-            time.sleep(1)
+            # time.sleep(1)
             return res
 
     results: List[any]
@@ -91,8 +90,8 @@ async def main():
     # Fill template placeholders.
     audio_path_key = """'cpCurrAudioPathVoices':'"""
     audio_paths = [
-        (r[r.find(audio_path_key) + audio_path_key.count :])[
-            : r[r.find(audio_path_key) + audio_path_key.count :].find("'")
+        (r[r.find(audio_path_key) + len(audio_path_key) :])[
+            : r[r.find(audio_path_key) + len(audio_path_key) :].find("'")
         ]
         for r in results
     ]
