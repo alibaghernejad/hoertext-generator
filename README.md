@@ -5,7 +5,7 @@
 ### Features:
 * Text templates support
 * High Quality Audio
-* multiple Audio format .mp3, .waw, .ogg ,...
+* multiple Audio format .mp3, .wav, .ogg ,...
 
 
 
