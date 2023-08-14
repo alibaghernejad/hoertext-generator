@@ -6,7 +6,7 @@
 
 from functools import reduce
 import calendar
-import time
+import sys, time, random
 import logging
 import io
 from typing import List
@@ -19,6 +19,7 @@ import librosa
 import pydub
 import soundfile as sf
 import numpy as np
+from ProgressBar import ProgressBar
 import payloads as ps
 
 
@@ -68,20 +69,33 @@ async def main():
     # A function to make an async GET request and return the response content
     async def fetch(session, url, payload, headers):
         time.sleep(1)
+
         async with session.post(url, data=payload, headers=headers) as response:
             res = await response.text()
             # time.sleep(1)
             return res
 
+    # progress bar
+    progress_bar = ProgressBar()
+    progress_bar.init(len(formatted_requests), 0)
+
+    def get_progressable_task(request, idx, total):
+        download_task = asyncio.create_task(
+            fetch(session, request[0], request[1], request[2])
+        )
+        download_task.add_done_callback(lambda t: progress_bar.update_statistics())
+
+        return download_task
+
     results: List[any]
     # Create a session object
     async with aiohttp.ClientSession() as session:
         # Create a semaphore with 10 permits
-        # semaphore = asyncio.Semaphore(10)
+        semaphore = asyncio.Semaphore(15)
         # Create a list of tasks with the semaphore
         tasks = [
-            asyncio.create_task(fetch(session, request[0], request[1], request[2]))
-            for request in formatted_requests
+            get_progressable_task(request, idx, len(formatted_requests))
+            for idx, request in enumerate(formatted_requests)
         ]
         # Wait for the tasks to complete and get their results
         results = await asyncio.gather(*tasks)
